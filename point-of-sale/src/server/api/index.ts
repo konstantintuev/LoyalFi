@@ -11,6 +11,7 @@ interface GetResponse {
 }
 
 const get: NextApiHandler<GetResponse> = async (request, response) => {
+    console.log("get request: ", request);
     const label = request.query.label;
     if (!label) throw new Error('missing label');
     if (typeof label !== 'string') throw new Error('invalid label');
@@ -29,6 +30,7 @@ interface PostResponse {
 }
 
 const post: NextApiHandler<PostResponse> = async (request, response) => {
+    console.log("post request: ", request);
     /*
     Transfer request params provided in the URL by the app client. In practice, these should be generated on the server,
     persisted along with an unpredictable opaque ID representing the payment, and the ID be passed to the app client,
