@@ -1,60 +1,42 @@
-import { NextPage } from 'next';
-import React from 'react';
-import { useMediaQuery } from 'react-responsive';
-import { FullscreenButton } from '../buttons/FullscreenButton';
-import { GenerateButton } from '../buttons/GenerateButton';
-import { TransactionsLink } from '../buttons/TransactionsLink';
-import { NumPad } from '../sections/NumPad';
-import { PoweredBy } from '../sections/PoweredBy';
-import { Summary } from '../sections/Summary';
-import css from './NewPage.module.css';
+import React, {useEffect, useState} from "react";
+import Scanner from "../contexts/Scanner";
+import ReactDOM from "react-dom";
+
+import {NextPage} from "next";
+import PendingPage from "./PendingPage";
+import {PaymentProvider} from "../contexts/PaymentProvider";
+import {getBarcodeEntries} from "./barcode_backend";
+import {useConnection} from "@solana/wallet-adapter-react";
+import {PublicKey} from "@solana/web3.js";
 
 const NewPage: NextPage = () => {
-    const phone = useMediaQuery({ query: '(max-width: 767px)' });
+    const {connection} = useConnection();
+    const [barcodeEntries, setBarcodeEntries] = useState<any>([]);
 
-    return phone ? (
-        <div className={css.root}>
-            <div className={css.top}>
-                <FullscreenButton />
-                <TransactionsLink />
-            </div>
-            <div className={css.body}>
-                <NumPad />
-                <GenerateButton />
-            </div>
-            <PoweredBy />
+    useEffect(() => {
+        getBarcodeEntries(connection, new PublicKey("CjzUfJHocMEMTycycyPMtDVuttjTtaZMjtnDqTj3MXsN"))
+            .then(data => {
+                    console.log(data);
+                    setBarcodeEntries(data);
+                }
+            );
+    }, [])
+
+    function NumberList(props) {
+        console.log(props);
+        const listItems = props.map((number) =>
+            <li>{number}</li>
+        );
+        return (
+            <ul>{listItems}</ul>
+        );
+    }
+    return(
+        <div>
+            <h2>Barcodes on-chain</h2>
+            <NumberList numbers={barcodeEntries} />
         </div>
-    ) : (
-        <div className={css.root}>
-            <div className={css.main}>
-                <div className={css.top}>
-                    <FullscreenButton />
-                </div>
-                <div className={css.body}>
-                    <NumPad />
-                </div>
-                <PoweredBy />
-            </div>
-            <div className={css.side}>
-                <div className={css.summary}>
-                    <Summary />
-                    <GenerateButton />
-                </div>
-                <div className={css.bottom}>
-                    <TransactionsLink />
-                </div>
-            </div>
-        </div>
-    );
+    )
 };
 
 export default NewPage;
-
-export function getServerSideProps() {
-    // Required so getInitialProps re-runs on the server-side
-    // If it runs on client-side then there's no req and the URL reading doesn't work
-    // See https://nextjs.org/docs/api-reference/data-fetching/get-initial-props
-    return {
-        props: {},
-    };
-}

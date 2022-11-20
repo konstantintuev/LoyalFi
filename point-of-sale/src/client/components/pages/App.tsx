@@ -15,6 +15,11 @@ import { TransactionsProvider } from '../contexts/TransactionsProvider';
 import { SolanaPayLogo } from '../images/SolanaPayLogo';
 import { SOLIcon } from '../images/SOLIcon';
 import css from './App.module.css';
+import useLocalStorage from "../contexts/LocalStorageState";
+import PendingPage from "./PendingPage";
+import {SocketProvider} from "../contexts/SocketProvider";
+import NoSSR from '../contexts/NoSSR';
+import NewPage from "./NewPage";
 
 interface AppProps extends NextAppProps {
     host: string;
@@ -31,28 +36,18 @@ const App: FC<AppProps> & { getInitialProps(appContext: AppContext): Promise<App
     query,
     pageProps,
 }) => {
-    const baseURL = `https://${host}`;
+    const baseURL = `http://${host}`;
 
-    // If you're testing without a mobile wallet, set this to true to allow a browser wallet to be used.
-    const connectWallet = false;
+
     // If you're testing without a mobile wallet, set this to Devnet or Mainnet to configure some browser wallets.
     const network = WalletAdapterNetwork.Devnet;
-
-    const wallets = useMemo(
-        () => (connectWallet ? [
-            new GlowWalletAdapter({ network }),
-            new PhantomWalletAdapter(),
-            new SolflareWalletAdapter({ network })
-        ] : []),
-        [connectWallet, network]
-    );
 
     // Toggle comments on these lines to use transaction requests instead of transfer requests.
     //const link = undefined;
     const link = useMemo(() => new URL(`${baseURL}/api/`), [baseURL]);
 
     let recipient: PublicKey | undefined = undefined;
-    const { recipient: recipientParam, label, message } = query;
+    let { recipient: recipientParam, label, message } = query;
     if (recipientParam && label) {
         try {
             recipient = new PublicKey(recipientParam);
@@ -60,42 +55,43 @@ const App: FC<AppProps> & { getInitialProps(appContext: AppContext): Promise<App
             console.error(error);
         }
     }
+    if (label == null) {
+        label = "Test";
+    }
+
+    const [merchantAddress, setMerchantAddress] = useLocalStorage("merchant-address", "");
+
 
     return (
+        <NoSSR>
         <ThemeProvider>
             <FullscreenProvider>
-                {recipient && label ? (
+                <ConfigProvider
+                    baseURL={baseURL}
+                >
+                <SocketProvider>
+                {merchantAddress === "" ? (
                     <ConnectionProvider endpoint={DEVNET_ENDPOINT}>
-                        <WalletProvider wallets={wallets} autoConnect={connectWallet}>
-                            <WalletModalProvider>
-                                <ConfigProvider
-                                    baseURL={baseURL}
-                                    link={link}
-                                    recipient={recipient}
-                                    label={label}
-                                    message={message}
-                                    symbol="SOL"
-                                    icon={<SOLIcon />}
-                                    decimals={9}
-                                    minDecimals={1}
-                                    connectWallet={connectWallet}
-                                >
-                                    <TransactionsProvider>
-                                        <PaymentProvider>
-                                            <Component {...pageProps} />
-                                        </PaymentProvider>
-                                    </TransactionsProvider>
-                                </ConfigProvider>
-                            </WalletModalProvider>
-                        </WalletProvider>
+
+                            <PaymentProvider data={{
+                                "action": "signin",
+                                "message": "Merchant, please sign in with your device!",
+                                "label": "Konstantin Mart"
+                            }}>
+                                <PendingPage/>
+                            </PaymentProvider>
                     </ConnectionProvider>
                 ) : (
-                    <div className={css.logo}>
-                        <SolanaPayLogo width={240} height={88} />
-                    </div>
+                    <ConnectionProvider endpoint={DEVNET_ENDPOINT}>
+                            <NewPage/>
+                    </ConnectionProvider>
+
                 )}
+                </SocketProvider>
+                </ConfigProvider>
             </FullscreenProvider>
         </ThemeProvider>
+        </NoSSR>
     );
 };
 

@@ -12,22 +12,22 @@ import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { ConfirmedSignatureInfo, Keypair, PublicKey, Transaction, TransactionSignature } from '@solana/web3.js';
 import BigNumber from 'bignumber.js';
 import React, { FC, ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
-import { useConfig } from '../../hooks/useConfig';
 import { useNavigateWithQuery } from '../../hooks/useNavigateWithQuery';
 import { PaymentContext, PaymentStatus } from '../../hooks/usePayment';
 import { Confirmations } from '../../types';
+import {useConfig} from "../../hooks/useConfig";
+import useLocalStorage from "./LocalStorageState";
 
 export interface PaymentProviderProps {
     children: ReactNode;
+    data: {};
 }
 
-export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
+export const PaymentProvider: FC<PaymentProviderProps> = ({ children, data }) => {
     const { connection } = useConnection();
-    const { link, recipient, splToken, label, message, requiredConfirmations, connectWallet } = useConfig();
-    const { publicKey, sendTransaction } = useWallet();
+    const { baseURL, requiredConfirmations } = useConfig();
+    const [merchantAddress, setMerchantAddress] = useLocalStorage("merchant-address", "");
 
-    const [amount, setAmount] = useState<BigNumber>();
-    const [memo, setMemo] = useState<string>();
     const [reference, setReference] = useState<PublicKey>();
     const [signature, setSignature] = useState<TransactionSignature>();
     const [status, setStatus] = useState(PaymentStatus.New);
@@ -36,52 +36,17 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
     const progress = useMemo(() => confirmations / requiredConfirmations, [confirmations, requiredConfirmations]);
 
     const url = useMemo(() => {
-        if (link) {
-            const url = new URL(String(link));
+        const url = new URL(`${baseURL}/api/`);
 
-            url.searchParams.append('recipient', recipient.toBase58());
-
-            if (amount) {
-                url.searchParams.append('amount', amount.toFixed(amount.decimalPlaces() ?? 0));
-            }
-
-            if (splToken) {
-                url.searchParams.append('spl-token', splToken.toBase58());
-            }
-
-            if (reference) {
-                url.searchParams.append('reference', reference.toBase58());
-            }
-
-            if (memo) {
-                url.searchParams.append('memo', memo);
-            }
-
-            if (label) {
-                url.searchParams.append('label', label);
-            }
-
-            if (message) {
-                url.searchParams.append('message', message);
-            }
-
-            return encodeURL({ link: url });
-        } else {
-            return encodeURL({
-                recipient,
-                amount,
-                splToken,
-                reference,
-                label,
-                message,
-                memo,
-            });
+        if (reference) {
+            url.searchParams.append('reference', reference.toBase58());
         }
-    }, [link, recipient, amount, splToken, reference, label, message, memo]);
+
+        url.searchParams.append('data', JSON.stringify(data));
+        return encodeURL({ link: url });
+    }, [reference]);
 
     const reset = useCallback(() => {
-        setAmount(undefined);
-        setMemo(undefined);
         setReference(undefined);
         setSignature(undefined);
         setStatus(PaymentStatus.New);
@@ -96,50 +61,6 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
             navigate('/pending');
         }
     }, [status, reference, navigate]);
-
-    // If there's a connected wallet, use it to sign and send the transaction
-    useEffect(() => {
-        if (status === PaymentStatus.Pending && connectWallet && publicKey) {
-            let changed = false;
-
-            const run = async () => {
-                try {
-                    const request = parseURL(url);
-                    let transaction: Transaction;
-
-                    if ('link' in request) {
-                        const { link } = request;
-                        transaction = await fetchTransaction(connection, publicKey, link);
-                    } else {
-                        const { recipient, amount, splToken, reference, memo } = request;
-                        if (!amount) return;
-
-                        transaction = await createTransfer(connection, publicKey, {
-                            recipient,
-                            amount,
-                            splToken,
-                            reference,
-                            memo,
-                        });
-                    }
-
-                    if (!changed) {
-                        await sendTransaction(transaction, connection);
-                    }
-                } catch (error) {
-                    // If the transaction is declined or fails, try again
-                    console.error(error);
-                    timeout = setTimeout(run, 5000);
-                }
-            };
-            let timeout = setTimeout(run, 0);
-
-            return () => {
-                changed = true;
-                clearTimeout(timeout);
-            };
-        }
-    }, [status, connectWallet, publicKey, url, connection, sendTransaction]);
 
     // When the status is pending, poll for the transaction using the reference key
     useEffect(() => {
@@ -173,12 +94,12 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
 
     // When the status is confirmed, validate the transaction against the provided params
     useEffect(() => {
-        if (!(status === PaymentStatus.Confirmed && signature && amount)) return;
+        if (!(status === PaymentStatus.Confirmed && signature)) return;
         let changed = false;
 
         const run = async () => {
             try {
-                await validateTransfer(connection, signature, { recipient, amount, splToken, reference });
+                //await validateTransfer(connection, signature, { recipient: new PublicKey(merchantAddress), amount, splToken, reference });
 
                 if (!changed) {
                     setStatus(PaymentStatus.Valid);
@@ -204,7 +125,7 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
             changed = true;
             clearTimeout(timeout);
         };
-    }, [status, signature, amount, connection, recipient, splToken, reference]);
+    }, [status, signature, connection, merchantAddress, reference]);
 
     // When the status is valid, poll for confirmations until the transaction is finalized
     useEffect(() => {
@@ -241,10 +162,7 @@ export const PaymentProvider: FC<PaymentProviderProps> = ({ children }) => {
     return (
         <PaymentContext.Provider
             value={{
-                amount,
-                setAmount,
-                memo,
-                setMemo,
+                data,
                 reference,
                 signature,
                 status,

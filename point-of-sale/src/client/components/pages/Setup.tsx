@@ -2,7 +2,6 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal, WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { NextPage } from 'next';
 import React, { useEffect } from 'react';
-import { useConfig } from '../../hooks/useConfig';
 import { usePayment } from '../../hooks/usePayment';
 import { BackButton } from '../buttons/BackButton';
 import { Amount } from '../sections/Amount';
@@ -10,26 +9,18 @@ import { PoweredBy } from '../sections/PoweredBy';
 import { QRCode } from '../sections/QRCode';
 import css from './PendingPage.module.css';
 
-const PendingPage: NextPage = () => {
-    const { data, reset } = usePayment();
+const Setup: NextPage = () => {
+    const { reset } = usePayment();
+
     return (
         <div className={css.root}>
             <div className={css.header}>
                 <BackButton onClick={reset}>Cancel</BackButton>
             </div>
             <div className={css.main}>
-                {data.message != null ?
-                    ( <div className={css.symbol}>{data.message}</div>) : <div/>
-                }
-                {data.amount != null ?
-                    ( <div className={css.amount}>
-                        <Amount amount={data.amount} />
-                    </div>) : <div/>
-                }
-                {data.symbol != null ?
-                    ( <div className={css.symbol}>{data.symbol}</div>) : <div/>
-                }
-
+                <p className={css.amount}>
+                    As a merchant scan to setup POS automatically!
+                </p>
                 <div className={css.code}>
                     <QRCode />
                 </div>
@@ -43,7 +34,7 @@ const PendingPage: NextPage = () => {
     );
 };
 
-export default PendingPage;
+export default Setup;
 
 export function getServerSideProps() {
     // Required so getInitialProps re-runs on the server-side

@@ -13,10 +13,7 @@ export enum PaymentStatus {
 }
 
 export interface PaymentContextState {
-    amount: BigNumber | undefined;
-    setAmount(amount: BigNumber | undefined): void;
-    memo: string | undefined;
-    setMemo(memo: string | undefined): void;
+    data: any;
     reference: PublicKey | undefined;
     signature: TransactionSignature | undefined;
     status: PaymentStatus;

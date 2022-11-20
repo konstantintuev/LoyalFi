@@ -1,0 +1,16 @@
+[features]
+seeds = false
+skip-lint = false
+[programs.localnet]
+solana_program_loyalty = "8fw6XuoacwK1tCF9175VzTjGkX1TdZosXxqa2fhiLHeN"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "devnet"
+wallet = "/Users/konstantintuev/.config/solana/id.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/solana-program-loyalty.ts"
+mod = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/mod-nft.ts"

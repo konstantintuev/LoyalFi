@@ -5,7 +5,7 @@ import BigNumber from 'bignumber.js';
 export const SOLANA_PROTOCOL = 'solana:';
 
 /** @internal */
-export const HTTPS_PROTOCOL = 'https:';
+export const HTTPS_PROTOCOL = 'http:';
 
 /** @internal */
 export const MEMO_PROGRAM_ID = new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');

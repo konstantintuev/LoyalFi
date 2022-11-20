@@ -4,17 +4,7 @@ import { Confirmations, Digits } from '../types';
 
 export interface ConfigContextState {
     baseURL: string;
-    link: URL | undefined;
-    recipient: PublicKey;
-    label: string;
-    message?: string;
-    splToken: PublicKey | undefined;
-    symbol: string;
-    icon: ReactElement;
-    decimals: Digits;
-    minDecimals: Digits;
     requiredConfirmations: Confirmations;
-    connectWallet: boolean;
 }
 
 export const ConfigContext = createContext<ConfigContextState>({} as ConfigContextState);
